@@ -25,43 +25,45 @@
       </svg>
     </div>
     <!--Camera-->
-    <button
-      v-if="store.cameraInfo.Connected"
-      class="flex flex-row bg-cyan-950 p-1 shadow-lg rounded-full border border-cyan-800 gap-1"
-      :class="[
-        {
-          'glow-green': cameraStore.showCameraInfo,
-        },
-      ]"
-      @click="handleCameraClickWithVisit"
-    >
-      <div class="flex w-5 h-5">
-        <CameraIcon :class="{ 'text-green-500': store.cameraInfo.IsExposing }" />
-      </div>
-      <p v-show="cameraStore.exposureCountdown">{{ cameraStore.exposureCountdown }} s</p>
-      <p class="hidden xs:block">Gain: {{ Number(store.cameraInfo.Gain).toFixed(0) }}</p>
-      <p v-if="store.cameraInfo.CoolerOn" class="hidden xs:flex items-center">
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          class="w-5 h-5 icon icon-tabler icons-tabler-outline icon-tabler-temperature"
-        >
-          <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-          <path d="M10 13.5a4 4 0 1 0 4 0v-8.5a2 2 0 0 0 -4 0v8.5" />
-          <path d="M10 9l4 0" />
-        </svg>
+    <div v-if="store.cameraInfo.Connected" class="flex items-center gap-1">
+      <button
+        class="flex flex-row bg-cyan-950 p-1 shadow-lg rounded-full border border-cyan-800 gap-1"
+        :class="[
+          {
+            'glow-green': cameraStore.showCameraInfo,
+          },
+        ]"
+        @click="handleCameraClickWithVisit"
+      >
+        <div class="flex w-5 h-5">
+          <CameraIcon :class="{ 'text-green-500': store.cameraInfo.IsExposing }" />
+        </div>
+        <p v-show="cameraStore.exposureCountdown">{{ cameraStore.exposureCountdown }} s</p>
+        <p class="hidden xs:block">Gain: {{ Number(store.cameraInfo.Gain).toFixed(0) }}</p>
+        <p v-if="store.cameraInfo.CoolerOn" class="hidden xs:flex items-center">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            class="w-5 h-5 icon icon-tabler icons-tabler-outline icon-tabler-temperature"
+          >
+            <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+            <path d="M10 13.5a4 4 0 1 0 4 0v-8.5a2 2 0 0 0 -4 0v8.5" />
+            <path d="M10 9l4 0" />
+          </svg>
 
-        {{ Number(store.cameraInfo.Temperature).toFixed(1) }}
-      </p>
-      <p v-if="store.cameraInfo.CoolerOn" class="hidden xs:block">
-        ({{ Number(store.cameraInfo.CoolerPower).toFixed(0) }}%)
-      </p>
-    </button>
+          {{ Number(store.cameraInfo.Temperature).toFixed(1) }}
+        </p>
+        <p v-if="store.cameraInfo.CoolerOn" class="hidden xs:block">
+          ({{ Number(store.cameraInfo.CoolerPower).toFixed(0) }}%)
+        </p>
+      </button>
+      <CameraCoolingToggleButton />
+    </div>
     <!--Filter-->
     <button
       v-if="store.filterInfo.Connected"
@@ -189,7 +191,9 @@
         />
       </svg>
       <svg
-        v-else-if="Number.isFinite(store.weatherInfo.CloudCover) && store.weatherInfo.CloudCover < 60"
+        v-else-if="
+          Number.isFinite(store.weatherInfo.CloudCover) && store.weatherInfo.CloudCover < 60
+        "
         class="w-4 h-4"
         fill="currentColor"
         viewBox="0 0 24 24"
@@ -206,7 +210,13 @@
           d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM19 18H6c-2.21 0-4-1.79-4-4 0-2.05 1.53-3.76 3.56-3.97l1.07-.11.5-.95C8.08 7.14 9.94 6 12 6c2.62 0 4.88 1.86 5.39 4.43l.3 1.5 1.53.11c1.56.1 2.78 1.41 2.78 2.96 0 1.65-1.35 3-3 3z"
         />
       </svg>
-      <span class="text-sm">{{ Number.isFinite(store.weatherInfo.Temperature) ? store.weatherInfo.Temperature.toFixed(1) : '--' }}°C</span>
+      <span class="text-sm"
+        >{{
+          Number.isFinite(store.weatherInfo.Temperature)
+            ? store.weatherInfo.Temperature.toFixed(1)
+            : '--'
+        }}°C</span
+      >
     </button>
     <!--Progress -->
     <button
@@ -356,6 +366,7 @@ import infoCamera from '../camera/infoCamera.vue';
 import infoMount from '../mount/infoMount.vue';
 import InfoFilterwheel from '../filterwheel/InfoFilterwheel.vue';
 import infoProgress from './infoProgress.vue';
+import CameraCoolingToggleButton from './CameraCoolingToggleButton.vue';
 
 const store = apiStore();
 const showWeatherModal = ref(false);

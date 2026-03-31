@@ -2,7 +2,7 @@ import { defineStore } from 'pinia';
 import { apiStore } from '@/store/store';
 import { useFramingStore } from '@/store/framingStore';
 import { useImagetStore } from './imageStore';
-import { ref, nextTick } from 'vue';
+import { computed, nextTick, ref, watch } from 'vue';
 import { timeSync } from '@/utils/timeSync';
 import { useSettingsStore } from './settingsStore';
 import { useMountStore } from './mountStore';
@@ -22,6 +22,7 @@ export const useCameraStore = defineStore('cameraStore', () => {
   const warmingTime = ref(10);
   const buttonCoolerOn = ref(false);
   const buttonWarmingOn = ref(false);
+  const coolingActionPending = ref(false);
   const plateSolveError = ref(false);
   const plateSolveResult = ref('');
   const exposureCountdown = ref(0);
@@ -34,6 +35,43 @@ export const useCameraStore = defineStore('cameraStore', () => {
   const showCameraInfo = ref(false); // eslint-disable-line no-unused-vars
   let countdownSessionId = 0; // Unique ID for each countdown session
   const cameraSettings = ref();
+  let atTargetTempTimeout = null;
+  const isStableAtTarget = ref(false);
+
+  const coolerStatus = computed(() => {
+    if (!store.cameraInfo.CoolerOn) {
+      return 'off';
+    }
+
+    if (buttonWarmingOn.value) {
+      return 'warming';
+    }
+
+    if (buttonCoolerOn.value) {
+      return 'cooling';
+    }
+
+    if (isStableAtTarget.value) {
+      return 'holding';
+    }
+
+    const currentTemp = Math.round(store.cameraInfo.Temperature);
+    const targetTemp = Math.round(store.cameraInfo.TemperatureSetPoint);
+
+    if (targetTemp < currentTemp) {
+      return 'cooling';
+    }
+
+    if (targetTemp > currentTemp) {
+      return 'warming';
+    }
+
+    return 'holding';
+  });
+
+  const isCoolingEnabled = computed(() => {
+    return store.cameraInfo.CoolerOn && !buttonWarmingOn.value;
+  });
 
   // Helper function to wait briefly
   function wait(ms) {
@@ -52,6 +90,191 @@ export const useCameraStore = defineStore('cameraStore', () => {
       console.error(' [cameraStore]Error fetching camera settings:', error.message);
     }
   }
+
+  async function setCoolingTime() {
+    try {
+      await apiService.profileChangeValue('CameraSettings-CoolingDuration', coolingTime.value);
+    } catch (error) {
+      console.log('Error:', error);
+    }
+  }
+
+  async function setWarmingTime() {
+    try {
+      await apiService.profileChangeValue('CameraSettings-WarmingDuration', warmingTime.value);
+    } catch (error) {
+      console.log('Error:', error);
+    }
+  }
+
+  async function setCoolingTemp() {
+    try {
+      await apiService.profileChangeValue('CameraSettings-Temperature', coolingTemp.value);
+    } catch (error) {
+      console.log('Error:', error);
+    }
+  }
+
+  async function toggleCooling() {
+    if (coolingActionPending.value) {
+      return;
+    }
+
+    coolingActionPending.value = true;
+
+    try {
+      if (isCoolingEnabled.value) {
+        await stopCooling();
+      } else {
+        await startCooling();
+      }
+    } finally {
+      coolingActionPending.value = false;
+    }
+  }
+
+  async function startCooling() {
+    try {
+      await apiService.stopCameraWarming();
+      buttonWarmingOn.value = false;
+      await apiService.startCameraCooling(coolingTemp.value, coolingTime.value);
+      buttonCoolerOn.value = true;
+    } catch (error) {
+      console.log('Error:', error);
+    }
+  }
+
+  async function stopCooling() {
+    try {
+      await apiService.stopCameraCooling();
+      buttonCoolerOn.value = false;
+    } catch (error) {
+      console.log('Error:', error);
+    }
+  }
+
+  async function toggleWarming() {
+    if (coolingActionPending.value) {
+      return;
+    }
+
+    coolingActionPending.value = true;
+
+    try {
+      if (buttonWarmingOn.value) {
+        await stopWarming();
+      } else {
+        await startWarming();
+      }
+    } finally {
+      coolingActionPending.value = false;
+    }
+  }
+
+  async function startWarming() {
+    try {
+      await apiService.stopCameraCooling();
+      buttonCoolerOn.value = false;
+      await apiService.startCameraWarming(warmingTime.value);
+      buttonWarmingOn.value = true;
+    } catch (error) {
+      console.log('Error:', error);
+    }
+  }
+
+  async function stopWarming() {
+    try {
+      await apiService.stopCameraWarming();
+      buttonWarmingOn.value = false;
+    } catch (error) {
+      console.log('Error:', error);
+    }
+  }
+
+  async function toggleDewHeater() {
+    try {
+      await apiService.startStoppDewheater(!store.cameraInfo.DewHeaterOn);
+    } catch (error) {
+      console.log('Error:', error);
+    }
+  }
+
+  function syncCoolingButtonStatus() {
+    if (!store.cameraInfo.CoolerOn) {
+      buttonCoolerOn.value = false;
+      buttonWarmingOn.value = false;
+      return;
+    }
+
+    if (isStableAtTarget.value) {
+      buttonCoolerOn.value = false;
+      buttonWarmingOn.value = false;
+      return;
+    }
+
+    if (
+      Math.round(store.cameraInfo.TemperatureSetPoint) < Math.round(store.cameraInfo.Temperature)
+    ) {
+      buttonCoolerOn.value = true;
+      buttonWarmingOn.value = false;
+      return;
+    }
+
+    if (
+      Math.round(store.cameraInfo.TemperatureSetPoint) > Math.round(store.cameraInfo.Temperature)
+    ) {
+      buttonCoolerOn.value = false;
+      buttonWarmingOn.value = true;
+      return;
+    }
+
+    buttonCoolerOn.value = false;
+    buttonWarmingOn.value = false;
+  }
+
+  watch(
+    () => store.cameraInfo.CoolerOn,
+    () => {
+      syncCoolingButtonStatus();
+    },
+    { immediate: true }
+  );
+
+  watch(
+    () => store.cameraInfo.AtTargetTemp,
+    (newValue) => {
+      if (atTargetTempTimeout) {
+        clearTimeout(atTargetTempTimeout);
+        atTargetTempTimeout = null;
+      }
+
+      if (newValue) {
+        atTargetTempTimeout = setTimeout(() => {
+          isStableAtTarget.value = true;
+          syncCoolingButtonStatus();
+        }, 15000);
+        return;
+      }
+
+      isStableAtTarget.value = false;
+      syncCoolingButtonStatus();
+    },
+    { immediate: true }
+  );
+
+  watch(
+    () => store.cameraInfo.TemperatureSetPoint,
+    () => {
+      syncCoolingButtonStatus();
+    }
+  );
+
+  watch(
+    () => store.cameraInfo.Temperature,
+    () => {
+      syncCoolingButtonStatus();
+    }
+  );
 
   // Start capture + image fetch
   async function capturePhoto(apiService, exposureTime, gain, solve = false) {
@@ -338,6 +561,9 @@ export const useCameraStore = defineStore('cameraStore', () => {
     warmingTime,
     buttonCoolerOn,
     buttonWarmingOn,
+    coolingActionPending,
+    coolerStatus,
+    isCoolingEnabled,
     plateSolveError,
     plateSolveResult,
     exposureCountdown,
@@ -356,5 +582,11 @@ export const useCameraStore = defineStore('cameraStore', () => {
     updateCountdown,
     stopCountdown,
     readSettings,
+    setCoolingTime,
+    setWarmingTime,
+    setCoolingTemp,
+    toggleCooling,
+    toggleWarming,
+    toggleDewHeater,
   };
 });
