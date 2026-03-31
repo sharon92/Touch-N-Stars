@@ -13,6 +13,7 @@ export const useGuiderStore = defineStore('guiderStore', {
     decDuration: [],
     chartInfo: [],
     showGuiderGraph: false,
+    clearedAfterStepId: null,
 
     phd2Connection: [],
     phd2Status: [],
@@ -166,6 +167,15 @@ export const useGuiderStore = defineStore('guiderStore', {
         clearInterval(this.intervalId);
         this.intervalId = null;
       }
+    },
+
+    clearGuideGraph(lastStepId) {
+      const parsedStepId = Number(lastStepId);
+      this.clearedAfterStepId = Number.isFinite(parsedStepId) ? parsedStepId : null;
+    },
+
+    resetGuideGraphClear() {
+      this.clearedAfterStepId = null;
     },
 
     async setPHD2Profil(id) {

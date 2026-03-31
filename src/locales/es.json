@@ -410,6 +410,7 @@
         "source1": "Fuente 1",
         "source2": "Fuente 2",
         "reset": "Restablecer",
+        "clear": "Clear graph",
         "noDataAvailable": "No hay datos disponibles",
         "timeDisplay": "Rango de Tiempo"
       },
@@ -723,6 +724,9 @@
       "running": "GUIANDO",
       "statusLabel": "Estado",
       "settings": "Configuración de guía",
+      "graph": {
+        "clear": "Clear graph"
+      },
       "phd2Path": "Camino PHD2",
       "phd2ServerHost": "Nombre de host del servidor PHD2",
       "phd2ServerPort": "Puerto del servidor PHD2",

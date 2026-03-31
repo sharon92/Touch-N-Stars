@@ -410,6 +410,7 @@
         "source1": "源 1",
         "source2": "源 2",
         "reset": "重置",
+        "clear": "Clear graph",
         "noDataAvailable": "无可用数据",
         "timeDisplay": "时间范围"
       },
@@ -723,6 +724,9 @@
       "running": "运行中",
       "statusLabel": "状态",
       "settings": "Guider Settings",
+      "graph": {
+        "clear": "Clear graph"
+      },
       "phd2Path": "PHD2 Path",
       "phd2ServerHost": "PHD2 Server Hostname",
       "phd2ServerPort": "PHD2 Server Port",

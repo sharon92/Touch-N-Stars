@@ -410,6 +410,7 @@
         "source1": "Source 1",
         "source2": "Source 2",
         "reset": "Réinitialiser",
+        "clear": "Clear graph",
         "noDataAvailable": "Aucune donnée disponible",
         "timeDisplay": "Plage horaire"
       },
@@ -723,6 +724,9 @@
       "running": "EN COURS D'EXÉCUTION",
       "statusLabel": "Statut",
       "settings": "Paramètres du guide",
+      "graph": {
+        "clear": "Clear graph"
+      },
       "phd2Path": "Parcours Doctorat2",
       "phd2ServerHost": "Nom d'hôte du serveur PHD2",
       "phd2ServerPort": "Port du serveur PHD2",

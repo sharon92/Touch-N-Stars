@@ -410,6 +410,7 @@
         "source1": "Zdroj 1",
         "source2": "Zdroj 2",
         "reset": "Obnovit",
+        "clear": "Clear graph",
         "noDataAvailable": "Žádná dostupná data",
         "timeDisplay": "Časový Rozsah"
       },
@@ -723,6 +724,9 @@
       "running": "PROBÍHÁ",
       "statusLabel": "Stav",
       "settings": "Guider Settings",
+      "graph": {
+        "clear": "Clear graph"
+      },
       "phd2Path": "PHD2 Path",
       "phd2ServerHost": "PHD2 Server Hostname",
       "phd2ServerPort": "PHD2 Server Port",

@@ -1,5 +1,17 @@
 <template>
   <div class="flex flex-col gap-3 px-2">
+    <div class="flex justify-end">
+      <button
+        type="button"
+        class="inline-flex items-center gap-1 rounded-md border border-gray-600 bg-gray-700/70 px-2 py-1 text-xs text-gray-200 transition-colors hover:bg-gray-600 disabled:cursor-not-allowed disabled:opacity-50"
+        :disabled="!hasVisibleData"
+        :aria-label="$t('components.sequence.graphControls.clear')"
+        @click="clearHistoryGraph"
+      >
+        <XCircleIcon class="h-4 w-4" />
+        <span>{{ $t('components.sequence.graphControls.clear') }}</span>
+      </button>
+    </div>
     <div class="w-full h-[15vh] min-h-20">
       <canvas ref="hfrGraph"></canvas>
     </div>
@@ -8,19 +20,27 @@
 </template>
 
 <script setup>
-import { ref, watch, onMounted, onBeforeUnmount, nextTick } from 'vue';
+import { computed, ref, watch, onMounted, onBeforeUnmount, nextTick } from 'vue';
 import { Chart } from 'chart.js/auto';
 import { apiStore } from '@/store/store';
 import { useSettingsStore } from '@/store/settingsStore';
 import { useSequenceStore } from '@/store/sequenceStore';
+import { XCircleIcon } from '@heroicons/vue/24/outline';
 import TimeRangeControls from './TimeRangeControls.vue';
-import { applyImageFilter } from '@/composables/useImageFilter';
+import {
+  getFilteredImageHistory,
+  getVisibleImageHistory,
+} from '@/composables/useVisibleImageHistory';
 
 const store = apiStore();
 const settingsStore = useSettingsStore();
 const sequenceStore = useSequenceStore();
 const hfrGraph = ref(null);
 let chart = null;
+
+const hasVisibleData = computed(() => {
+  return getVisibleData(store.imageHistoryInfo).length > 0;
+});
 
 onMounted(() => {
   nextTick(() => {
@@ -31,9 +51,8 @@ onMounted(() => {
 function getFilteredData(allData) {
   if (!allData || allData.length === 0) return allData;
 
-  const globallyFiltered = applyImageFilter(allData, settingsStore.monitorViewSetting.imageFilter);
-
-  const { startIndex, endIndex } = settingsStore.monitorViewSetting.historyTimeRange;
+  const { startIndex } = settingsStore.monitorViewSetting.historyTimeRange;
+  const globallyFiltered = getGlobalFilteredData(allData);
 
   // Auto-reset if startIndex is beyond current data length (new session with different data)
   if (startIndex >= globallyFiltered.length) {
@@ -42,10 +61,33 @@ function getFilteredData(allData) {
     return globallyFiltered;
   }
 
-  if (endIndex === null) {
-    return globallyFiltered.slice(startIndex);
+  return getVisibleImageHistory(
+    allData,
+    settingsStore.monitorViewSetting.imageFilter,
+    settingsStore.monitorViewSetting.historyTimeRange
+  );
+}
+
+function getGlobalFilteredData(allData) {
+  return getFilteredImageHistory(allData, settingsStore.monitorViewSetting.imageFilter);
+}
+
+function getVisibleData(allData) {
+  return getVisibleImageHistory(
+    allData,
+    settingsStore.monitorViewSetting.imageFilter,
+    settingsStore.monitorViewSetting.historyTimeRange
+  );
+}
+
+function clearHistoryGraph() {
+  const filteredData = getGlobalFilteredData(store.imageHistoryInfo);
+
+  if (!filteredData.length) {
+    return;
   }
-  return globallyFiltered.slice(startIndex, endIndex + 1);
+
+  settingsStore.setHistoryTimeRange(filteredData.length - 1, null);
 }
 
 function destroyChart() {
@@ -228,7 +270,7 @@ function initGraph() {
 function updateChartData() {
   if (!chart || !store.imageHistoryInfo) return;
 
-  const responseData = getFilteredData(store.imageHistoryInfo);
+  const responseData = getVisibleData(store.imageHistoryInfo);
 
   const source1 = settingsStore.monitorViewSetting.graphDataSource1;
   const source2 = settingsStore.monitorViewSetting.graphDataSource2;

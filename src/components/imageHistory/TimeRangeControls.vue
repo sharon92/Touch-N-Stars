@@ -148,6 +148,7 @@ import { computed, ref } from 'vue';
 import { ChevronRightIcon, Cog6ToothIcon } from '@heroicons/vue/24/outline';
 import { useSettingsStore } from '@/store/settingsStore';
 import { apiStore } from '@/store/store';
+import { getFilteredImageHistory } from '@/composables/useVisibleImageHistory';
 
 const settingsStore = useSettingsStore();
 const apiStoreInstance = apiStore();
@@ -167,7 +168,14 @@ const availableSources = [
   'RMS',
 ];
 
-const dataLength = computed(() => apiStoreInstance.imageHistoryInfo?.length ?? 0);
+const filteredImages = computed(() =>
+  getFilteredImageHistory(
+    apiStoreInstance.imageHistoryInfo || [],
+    settingsStore.monitorViewSetting.imageFilter
+  )
+);
+
+const dataLength = computed(() => filteredImages.value.length);
 
 const currentStartIndex = computed(
   () => settingsStore.monitorViewSetting.historyTimeRange.startIndex
@@ -176,7 +184,7 @@ const currentStartIndex = computed(
 const currentEndIndex = computed(() => settingsStore.monitorViewSetting.historyTimeRange.endIndex);
 
 const currentEndIndexValue = computed(() =>
-  currentEndIndex.value !== null ? currentEndIndex.value : dataLength.value - 1
+  currentEndIndex.value !== null ? currentEndIndex.value : Math.max(dataLength.value - 1, 0)
 );
 
 const dataSource1 = computed(() => settingsStore.monitorViewSetting.graphDataSource1);
@@ -207,7 +215,7 @@ function resetTimeRange() {
 }
 
 function formatTime(index) {
-  const allData = apiStoreInstance.imageHistoryInfo || [];
+  const allData = filteredImages.value;
   if (index >= 0 && index < allData.length) {
     return new Date(allData[index].Date).toLocaleTimeString();
   }
