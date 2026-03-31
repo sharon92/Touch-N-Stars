@@ -6,6 +6,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [App4.8.0] - xxxx-xx-xx
 ### Added
+- Sequence Monitor: Autofocus markers in the HFR chart
 - Sequence: Set multi targets
 - GPS Sync option
 - Time Snyc option

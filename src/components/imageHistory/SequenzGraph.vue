@@ -13,14 +13,50 @@ import { Chart } from 'chart.js/auto';
 import { apiStore } from '@/store/store';
 import { useSettingsStore } from '@/store/settingsStore';
 import { useSequenceStore } from '@/store/sequenceStore';
+import { useAutofocusStore } from '@/store/autofocusStore';
 import TimeRangeControls from './TimeRangeControls.vue';
 import { applyImageFilter } from '@/composables/useImageFilter';
 
 const store = apiStore();
 const settingsStore = useSettingsStore();
 const sequenceStore = useSequenceStore();
+const autofocusStore = useAutofocusStore();
 const hfrGraph = ref(null);
 let chart = null;
+
+const autofocusMarkerPlugin = {
+  id: 'hfr-autofocus-markers',
+  afterDatasetsDraw(chartInstance) {
+    const markerIndices = chartInstance.$autofocusMarkerIndices || [];
+    const xScale = chartInstance.scales.x;
+    const { ctx, chartArea } = chartInstance;
+
+    if (!markerIndices.length || !xScale || !chartArea) {
+      return;
+    }
+
+    ctx.save();
+    ctx.strokeStyle = 'rgba(34, 197, 94, 0.45)';
+    ctx.fillStyle = 'rgba(74, 222, 128, 0.95)';
+    ctx.lineWidth = 1.5;
+    ctx.font = '10px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.setLineDash([4, 4]);
+
+    markerIndices.forEach((markerIndex) => {
+      const x = xScale.getPixelForValue(markerIndex);
+
+      ctx.beginPath();
+      ctx.moveTo(x, chartArea.top);
+      ctx.lineTo(x, chartArea.bottom);
+      ctx.stroke();
+      ctx.fillText('AF', x, chartArea.top + 4);
+    });
+
+    ctx.restore();
+  },
+};
 
 onMounted(() => {
   nextTick(() => {
@@ -91,6 +127,24 @@ function getDataForSource(data, source) {
   });
 }
 
+function getAutofocusMarkerIndices(data) {
+  if (!Array.isArray(data) || data.length === 0 || autofocusStore.markerTimes.length === 0) {
+    return [];
+  }
+
+  const dataTimes = data.map((item) => new Date(item.Date).getTime());
+
+  return [
+    ...new Set(
+      autofocusStore.markerTimes
+        .map((markerTime) => new Date(markerTime).getTime())
+        .filter((markerTime) => Number.isFinite(markerTime))
+        .map((markerTime) => dataTimes.findIndex((time) => time >= markerTime))
+        .filter((index) => index >= 0)
+    ),
+  ];
+}
+
 function handleCanvasClick(event) {
   if (!chart) return;
 
@@ -135,6 +189,7 @@ function initGraph() {
 
   // Chart.js-Instanz erzeugen
   chart = new Chart(hfrGraph.value, {
+    plugins: [autofocusMarkerPlugin],
     type: 'line',
     data: {
       labels,
@@ -221,6 +276,8 @@ function initGraph() {
     },
   });
 
+  chart.$autofocusMarkerIndices = getAutofocusMarkerIndices(responseData);
+
   // Add click handler to canvas
   hfrGraph.value.addEventListener('click', handleCanvasClick);
 }
@@ -240,6 +297,7 @@ function updateChartData() {
   chart.data.labels = newLabels;
   chart.data.datasets[0].data = newData1;
   chart.data.datasets[1].data = newData2;
+  chart.$autofocusMarkerIndices = getAutofocusMarkerIndices(responseData);
   chart.update();
 }
 
@@ -258,6 +316,14 @@ watch(
   () => settingsStore.monitorViewSetting.historyTimeRange,
   () => {
     console.log('[SequenceGraph] Time range changed, updating graph...');
+    updateChartData();
+  },
+  { deep: true }
+);
+
+watch(
+  () => autofocusStore.markerTimes,
+  () => {
     updateChartData();
   },
   { deep: true }

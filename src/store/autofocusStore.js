@@ -6,6 +6,7 @@ export const useAutofocusStore = defineStore('autofocus', {
     points: [],
     lastStartTime: null,
     isFinished: false,
+    markerTimes: [],
   }),
 
   actions: {
@@ -15,11 +16,19 @@ export const useAutofocusStore = defineStore('autofocus', {
       this.points = [];
       this.lastStartTime = null;
       this.isFinished = false;
+      this.markerTimes = [];
 
       if (!events || events.length === 0) {
         //console.log('[Autofocus] No events to process');
         return;
       }
+
+      const chronologicalEvents = [...events].sort(
+        (a, b) => new Date(a.Time).getTime() - new Date(b.Time).getTime()
+      );
+      this.markerTimes = chronologicalEvents
+        .filter((event) => event.Event === 'AUTOFOCUS-FINISHED')
+        .map((event) => event.Time);
 
       // Find the latest AUTOFOCUS-STARTING event (in reverse chronological order)
       let latestStartingIndex = -1;
@@ -71,6 +80,7 @@ export const useAutofocusStore = defineStore('autofocus', {
       this.points = [];
       this.lastStartTime = null;
       this.isFinished = false;
+      this.markerTimes = [];
     },
   },
 });
