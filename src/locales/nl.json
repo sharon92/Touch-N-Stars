@@ -1306,6 +1306,7 @@
         "ecliptic_lines_visible": "Toon ecliptica",
         "atmosphere_visible": "Toon atmosfeer",
         "landscapes_visible": "Toon landschap",
+        "terrestrial_objects": "Terrestrial Objects",
         "dsos_visible": "Deep Sky Objects (Messier, NGC)",
         "title": "Instellingen"
       }

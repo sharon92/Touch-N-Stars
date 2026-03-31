@@ -99,6 +99,10 @@
           </div>
         </div>
 
+        <div class="text-xs font-semibold uppercase tracking-wide text-cyan-300 px-1 pt-1">
+          {{ $t('components.stellarium.settings.terrestrial_objects') }}
+        </div>
+
         <div
           class="flex flex-row items-center justify-between w-full border border-gray-500 p-2 rounded-lg"
         >
@@ -124,7 +128,7 @@
           </label>
           <div>
             <toggleButton
-              @click="showLandscape"
+              @click="toggleLandscapeVisibility"
               :status-value="settingsStore.stellarium.landscapesVisible"
             />
           </div>
@@ -165,11 +169,8 @@ function toggleControls() {
   settingsVisible.value = !settingsVisible.value;
 }
 
-function showLandscape() {
+function toggleLandscapeVisibility() {
   settingsStore.stellarium.landscapesVisible = !settingsStore.stellarium.landscapesVisible;
-  // Emit event to parent to trigger re-render via landscapeSwitch
-  const event = new CustomEvent('refresh-stellarium');
-  window.dispatchEvent(event);
 }
 
 // Check if in landscape mode

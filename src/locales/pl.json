@@ -1306,6 +1306,7 @@
         "ecliptic_lines_visible": "Pokaż ekliptykę",
         "atmosphere_visible": "Pokaż atmosferę",
         "landscapes_visible": "Pokaż krajobrazy",
+        "terrestrial_objects": "Terrestrial Objects",
         "dsos_visible": "Obiekty Deep Sky (Messier, NGC)",
         "title": "Ustawienia"
       }

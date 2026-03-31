@@ -1306,6 +1306,7 @@
         "ecliptic_lines_visible": "显示黄道",
         "atmosphere_visible": "显示大气层",
         "landscapes_visible": "显示地平线",
+        "terrestrial_objects": "Terrestrial Objects",
         "dsos_visible": "深空天体 (梅西耶, NGC)",
         "title": "设置"
       }

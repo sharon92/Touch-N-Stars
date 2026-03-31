@@ -5,6 +5,7 @@ export const useStellariumStore = defineStore('stellariumStore', {
   state: () => ({
     stel: null,
     baseUrl: '',
+    landscapeSourceCore: null,
     search: {
       RAangle: 0,
       DECangle: 0,
@@ -13,11 +14,24 @@ export const useStellariumStore = defineStore('stellariumStore', {
     },
   }),
   actions: {
+    ensureLandscapeSource(core) {
+      if (!core || this.landscapeSourceCore === core || !this.baseUrl) {
+        return;
+      }
+
+      core.landscapes.addDataSource({
+        url: this.baseUrl + 'landscapes/guereins',
+        key: 'guereins',
+      });
+      this.landscapeSourceCore = core;
+    },
+
     updateStellariumCore() {
       const settingsStore = useSettingsStore();
       if (this.stel) {
         const core = this.stel.core;
 
+        this.ensureLandscapeSource(core);
         core.constellations.lines_visible = settingsStore.stellarium.constellationsLinesVisible;
         core.constellations.labels_visible = settingsStore.stellarium.constellationsLinesVisible;
         core.lines.azimuthal.visible = settingsStore.stellarium.azimuthalLinesVisible;
@@ -26,16 +40,7 @@ export const useStellariumStore = defineStore('stellariumStore', {
         core.lines.ecliptic.visible = settingsStore.stellarium.eclipticLinesVisible;
         core.atmosphere.visible = settingsStore.stellarium.atmosphereVisible;
         core.dsos.visible = settingsStore.stellarium.dsosVisible; // Deep Sky Objects (Messier, NGC, etc.)
-        // core.landscapes.visible = settingsStore.stellarium.landscapesVisible;
-        if (settingsStore.stellarium.landscapesVisible) {
-          core.landscapes.addDataSource({
-            url: this.baseUrl + 'landscapes/guereins',
-            key: 'guereins',
-          });
-        } else {
-          core.landscapes.addDataSource({ url: this.baseUrl + 'landscapes/gray', key: 'gray' });
-        }
-        core.landscapes.visible = true;
+        core.landscapes.visible = settingsStore.stellarium.landscapesVisible;
 
         console.log('Stellarium settings updated:');
       }

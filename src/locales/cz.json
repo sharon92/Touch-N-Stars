@@ -1306,6 +1306,7 @@
         "ecliptic_lines_visible": "Zobrazit ekliptiku",
         "atmosphere_visible": "Zobrazit atmosféru",
         "landscapes_visible": "Ukázat krajinu",
+        "terrestrial_objects": "Terrestrial Objects",
         "dsos_visible": "Deep Sky Objekty (Messier, NGC)",
         "title": "Settings"
       }
