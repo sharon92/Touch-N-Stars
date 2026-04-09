@@ -105,6 +105,25 @@ export const useFlatassistantStore = defineStore('flatassistantStore', {
       );
     },
 
+    resolveCompletionProgress(status, progress = null) {
+      const fallbackCompleted = Math.max(
+        0,
+        Number(progress?.completed ?? this.status?.CompletedIterations) || 0
+      );
+      const fallbackTotal = Math.max(
+        0,
+        Number(progress?.total ?? this.status?.TotalIterations) || 0
+      );
+      const completed = Number(status?.CompletedIterations);
+      const total = Number(status?.TotalIterations);
+
+      return {
+        ...status,
+        CompletedIterations: completed >= 0 ? completed : fallbackCompleted,
+        TotalIterations: total > 0 ? total : fallbackTotal,
+      };
+    },
+
     shouldOfferDarks(status, jobs = null) {
       const requestedDarks = Array.isArray(jobs)
         ? jobs.some((job) => Number(job?.count) > 0)
@@ -140,12 +159,36 @@ export const useFlatassistantStore = defineStore('flatassistantStore', {
     },
 
     async waitForCompletion(statusLoader, pollMs = 1000) {
+      const observedProgress = {
+        completed: Math.max(0, Number(this.status?.CompletedIterations) || 0),
+        total: Math.max(0, Number(this.status?.TotalIterations) || 0),
+      };
+
       while (!this.workflowStopRequested) {
         const response = await statusLoader();
         const status = response?.Response ?? response;
 
         if (status) {
-          this.status = status;
+          if (Number(status.CompletedIterations) >= 0) {
+            observedProgress.completed = Math.max(
+              observedProgress.completed,
+              Number(status.CompletedIterations) || 0
+            );
+          }
+
+          if (Number(status.TotalIterations) > 0) {
+            observedProgress.total = Math.max(
+              observedProgress.total,
+              Number(status.TotalIterations) || 0
+            );
+          }
+
+          const resolvedStatus =
+            status.State === 'Running'
+              ? status
+              : this.resolveCompletionProgress(status, observedProgress);
+
+          this.status = resolvedStatus;
 
           if (status.CurrentADU !== null && status.CurrentADU !== undefined) {
             this.currentADU = Math.round(status.CurrentADU);
@@ -154,12 +197,12 @@ export const useFlatassistantStore = defineStore('flatassistantStore', {
           if (status.State !== 'Running') {
             this.lastRun = {
               type: this.currentRunType,
-              completed: Math.max(0, Number(status.CompletedIterations) || 0),
-              total: Math.max(0, Number(status.TotalIterations) || 0),
-              success: this.didRunSucceed(status),
+              completed: Math.max(0, Number(resolvedStatus.CompletedIterations) || 0),
+              total: Math.max(0, Number(resolvedStatus.TotalIterations) || 0),
+              success: this.didRunSucceed(resolvedStatus),
               lastADU: this.currentADU,
             };
-            return status;
+            return resolvedStatus;
           }
         }
 
