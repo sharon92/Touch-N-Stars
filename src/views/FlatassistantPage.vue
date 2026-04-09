@@ -123,8 +123,17 @@ watch(
   () => store.profileInfo?.FlatWizardSettings,
   (flatSettings) => {
     if (!flatSettings) return;
-    flatsStore.count = flatSettings.FlatCount ?? flatsStore.count;
-    flatsStore.darkCount = flatSettings.DarkFlatCount ?? 0;
+    if (flatSettings.FlatCount !== undefined && flatSettings.FlatCount !== null) {
+      flatsStore.count = flatSettings.FlatCount;
+    }
+
+    if (
+      Object.prototype.hasOwnProperty.call(flatSettings, 'DarkFlatCount') &&
+      flatSettings.DarkFlatCount !== undefined &&
+      flatSettings.DarkFlatCount !== null
+    ) {
+      flatsStore.darkCount = flatSettings.DarkFlatCount;
+    }
   },
   { immediate: true }
 );

@@ -105,8 +105,12 @@ export const useFlatassistantStore = defineStore('flatassistantStore', {
       );
     },
 
-    shouldOfferDarks(status) {
-      return this.darkCount > 0 && this.didRunSucceed(status) && !this.workflowStopRequested;
+    shouldOfferDarks(status, jobs = null) {
+      const requestedDarks = Array.isArray(jobs)
+        ? jobs.some((job) => Number(job?.count) > 0)
+        : this.darkCount > 0;
+
+      return requestedDarks && this.didRunSucceed(status) && !this.workflowStopRequested;
     },
 
     formatOperationMessage(payload) {
@@ -181,7 +185,7 @@ export const useFlatassistantStore = defineStore('flatassistantStore', {
 
       const finalStatus = await this.waitForCompletion(statusLoader);
 
-      if (darkJobs.length > 0 && this.shouldOfferDarks(finalStatus)) {
+      if (darkJobs.length > 0 && this.shouldOfferDarks(finalStatus, darkJobs)) {
         await this.runDarkSeries(darkJobs, keepClosed);
       }
 
