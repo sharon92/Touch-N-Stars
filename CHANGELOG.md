@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Flat Assistant: Add dark flat count and post-flat dark workflow for supported flat modes
 
+### Fixed
+- Flat Assistant: Fall back to sequential ninaAPI runs when the installed Touch'N'Stars backend does not expose Multi Mode routes
+
 
 ## [App4.8.0] - xxxx-xx-xx
 ### Added

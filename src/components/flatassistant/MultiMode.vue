@@ -406,6 +406,10 @@ function toggleFilter(filterId, value) {
   }
 }
 
+function isMissingMultiModeBackend(error) {
+  return Number(error?.response?.status) === 404;
+}
+
 // ── Session persistence (mode + filter selections, NOT configs) ───────────────
 
 watch(
@@ -540,6 +544,24 @@ async function startMultiMode() {
       keepClosed: state.keepClosed,
     });
   } catch (error) {
+    if (isMissingMultiModeBackend(error)) {
+      console.warn('Multi mode backend route unavailable, using ninaAPI fallback.');
+
+      try {
+        await flatsStore.runMultiModeFallback({
+          mode: state.selectedMode,
+          filters,
+          keepClosed: state.keepClosed,
+          darkCount: flatsStore.darkCount,
+        });
+        return;
+      } catch (fallbackError) {
+        console.error('Error starting multimode flats fallback:', fallbackError);
+        flatsStore.notifyOperationIssue(fallbackError?.response?.data ?? fallbackError);
+        return;
+      }
+    }
+
     console.error('Error starting multimode flats:', error);
     flatsStore.notifyOperationIssue(error?.response?.data ?? error);
   }

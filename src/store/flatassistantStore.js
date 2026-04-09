@@ -245,6 +245,152 @@ export const useFlatassistantStore = defineStore('flatassistantStore', {
       return finalStatus;
     },
 
+    buildFlatRequest(mode, filter, keepClosed = false) {
+      if (mode === 'AutoExposure') {
+        return () =>
+          apiService.flatAutoExposure(
+            filter.count,
+            filter.minExposure,
+            filter.maxExposure,
+            filter.histogramMean,
+            filter.meanTolerance,
+            filter.binning,
+            filter.gain,
+            filter.offset,
+            filter.filterId,
+            filter.brightness,
+            keepClosed
+          );
+      }
+
+      if (mode === 'AutoBrightness') {
+        return () =>
+          apiService.flatAutoBrightness(
+            filter.count,
+            filter.minBrightness,
+            filter.maxBrightness,
+            filter.histogramMean,
+            filter.meanTolerance,
+            filter.binning,
+            filter.gain,
+            filter.offset,
+            filter.filterId,
+            filter.exposureTime,
+            keepClosed
+          );
+      }
+
+      return () =>
+        apiService.flatSkyflat(
+          filter.count,
+          filter.minExposure,
+          filter.maxExposure,
+          filter.histogramMean,
+          filter.meanTolerance,
+          filter.binning,
+          filter.gain,
+          filter.offset,
+          filter.filterId,
+          keepClosed
+        );
+    },
+
+    async runMultiModeFallback({ mode, filters, keepClosed = false, darkCount = 0 }) {
+      const validFilters = filters.filter((filter) => Number(filter?.count) > 0);
+      if (!validFilters.length) {
+        return null;
+      }
+
+      let totalRequested = 0;
+      let totalCompleted = 0;
+      let successfulFilters = 0;
+      let allSucceeded = true;
+      let lastADU = null;
+      const darkJobs = [];
+
+      this.currentRunType = 'flats';
+      this.workflowStopRequested = false;
+      this.lastRun = null;
+      this.currentADU = null;
+
+      for (const [index, filter] of validFilters.entries()) {
+        if (this.workflowStopRequested) {
+          break;
+        }
+
+        const requestedCount = Math.max(0, Number(filter.count) || 0);
+        totalRequested += requestedCount;
+        this.startManagedRun('flats');
+        this.status = {
+          ...this.status,
+          State: 'Running',
+          TotalIterations: requestedCount,
+          CompletedIterations: 0,
+          TotalFilters: validFilters.length,
+          CompletedFilters: index,
+        };
+
+        const response = await this.buildFlatRequest(mode, filter, keepClosed)();
+        if (response?.Success === false) {
+          allSucceeded = false;
+          this.notifyOperationIssue(response, 'warning');
+          break;
+        }
+
+        const finalStatus = await this.waitForCompletion(() =>
+          apiService.flatassistantAction('status')
+        );
+        const completedIterations = Math.max(0, Number(finalStatus?.CompletedIterations) || 0);
+        totalCompleted += completedIterations;
+        lastADU = this.currentADU;
+
+        if (!this.didRunSucceed(finalStatus)) {
+          allSucceeded = false;
+          break;
+        }
+
+        successfulFilters += 1;
+
+        if (mode !== 'SkyFlat' && Number(darkCount) > 0) {
+          darkJobs.push({
+            count: darkCount,
+            filterId: filter.filterId,
+            binning: filter.binning,
+            gain: filter.gain,
+            offset: filter.offset,
+          });
+        }
+      }
+
+      this.status = {
+        ...this.resolveCompletionProgress(this.status, {
+          completed: totalCompleted,
+          total: totalRequested,
+        }),
+        State: 'Finished',
+        TotalFilters: validFilters.length,
+        CompletedFilters: successfulFilters > 0 ? successfulFilters - 1 : -1,
+      };
+
+      this.lastRun = {
+        type: 'flats',
+        completed: totalCompleted,
+        total: totalRequested,
+        success:
+          allSucceeded &&
+          !this.workflowStopRequested &&
+          totalRequested > 0 &&
+          totalCompleted >= totalRequested,
+        lastADU,
+      };
+
+      if (darkJobs.length > 0 && allSucceeded && !this.workflowStopRequested) {
+        await this.runDarkSeries(darkJobs, keepClosed);
+      }
+
+      return this.lastRun;
+    },
+
     async stopWorkflow() {
       this.workflowStopRequested = true;
       return Promise.allSettled([
