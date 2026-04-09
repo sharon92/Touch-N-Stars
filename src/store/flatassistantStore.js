@@ -116,11 +116,21 @@ export const useFlatassistantStore = defineStore('flatassistantStore', {
       );
       const completed = Number(status?.CompletedIterations);
       const total = Number(status?.TotalIterations);
+      const resolvedCompleted = completed >= 0 ? completed : fallbackCompleted;
+      const resolvedTotal = total > 0 ? total : fallbackTotal;
+      const shouldPromoteCompleted =
+        !this.workflowStopRequested &&
+        status?.State === 'Finished' &&
+        completed < 0 &&
+        total <= 0 &&
+        resolvedTotal > 0 &&
+        resolvedCompleted > 0 &&
+        resolvedCompleted + 1 === resolvedTotal;
 
       return {
         ...status,
-        CompletedIterations: completed >= 0 ? completed : fallbackCompleted,
-        TotalIterations: total > 0 ? total : fallbackTotal,
+        CompletedIterations: shouldPromoteCompleted ? resolvedTotal : resolvedCompleted,
+        TotalIterations: resolvedTotal,
       };
     },
 
